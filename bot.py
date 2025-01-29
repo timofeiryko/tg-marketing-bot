@@ -169,12 +169,16 @@ async def process_email(message: types.Message, state: FSMContext):
         return
 
     email = emailinfo.normalized
+    await state.clear()
 
-    try:
-        user = await TelegramUser.get(telegram_id=message.from_user.id)
-    except TelegramUser.DoesNotExist:
-        await message.answer(MESSAGES_DICT['error'])
-        return
+    user, _ = await TelegramUser.get_or_create(
+        telegram_id=message.from_user.id,
+        defaults={
+            'username': message.from_user.username,
+            'first_name': message.from_user.first_name,
+            'last_name': message.from_user.last_name
+        }
+    )
     
     user.email = email
     await user.save()
@@ -201,15 +205,7 @@ async def process_successful_payment(message: types.Message):
 
     if payload == 'buy_intensive':
 
-        user, _ = await TelegramUser.get_or_create(
-            telegram_id=message.from_user.id,
-            defaults={
-                'username': message.from_user.username,
-                'first_name': message.from_user.first_name,
-                'last_name': message.from_user.last_name
-            }
-        )
-
+        user = await TelegramUser.get(telegram_id=message.from_user.id)
         user.has_payed_for_intensive = True
         await user.save()
 
